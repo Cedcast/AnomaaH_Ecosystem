@@ -71,11 +71,98 @@ docker-compose up --build
 
 ## 🏗 Architecture
 
-11 microservices including API Gateway, Auth, Booking, Order, Payment, Tracking, Notification, Assignment, Review, Rider Status, and Admin UI services.
+The platform consists of **11 backend microservices** + **Android rider app**:
 
-**Technology Stack**: Python 3.11, FastAPI, PostgreSQL 15, Redis, Docker
+### Backend Services
+
+| Service | Port | Purpose |
+|---------|------|---------|
+| **API Gateway** | 8000 | Request routing, authentication, rate limiting |
+| **Auth Service** | 8600 | User authentication, JWT tokens, RBAC |
+| **Booking Service** | 8100 | Public booking, distance calculation |
+| **Order Service** | 8500 | Order management, state machine |
+| **Payment Service** | 8200 | Payment processing, webhooks |
+| **Tracking Service** | 8300 | Real-time tracking, WebSocket |
+| **Notification Service** | 8400 | SMS, email, push notifications |
+| **Assignment Service** | 8900 | Automatic rider matching |
+| **Review Service** | 8700 | Ratings and reviews |
+| **Rider Status Service** | 8800 | Rider availability tracking |
+| **Admin UI** | 9000 | Management dashboard |
+
+### 📱 Rider Mobile App (Android)
+
+**Platform**: Android 9.0+ (API 28+)  
+**Language**: Kotlin 100%  
+**Architecture**: MVVM + Repository Pattern
+
+**Features**:
+- Phone + 5-digit passcode login
+- Order management (accept, pickup, deliver)
+- Live tracking with Google Maps
+- Earnings & payouts (via Hubtel mobile money)
+- Profile & online status management
+
+📱 **Setup Guide**: [ANDROID_APP_GUIDE.md](ANDROID_APP_GUIDE.md)  
+📁 **Source**: `rider-app/` directory
+
+### Technology Stack
+
+**Backend**:
+- Python 3.11, FastAPI, SQLAlchemy
+- PostgreSQL 15
+- Redis (for rate limiting)
+- Docker & Docker Compose
+
+**Mobile**:
+- Kotlin, MVVM, Retrofit, Hilt
+- Google Maps, Material Design 3
+- Encrypted SharedPreferences
+
+**Common**:
+- API Protocol: REST + WebSocket
+- Authentication: JWT with bcrypt
 
 For detailed architecture, see [ARCHITECTURE_DELIVERY_RIDER_SAAS.md](ARCHITECTURE_DELIVERY_RIDER_SAAS.md)
+
+## 📱 Rider Mobile App
+
+The platform includes a native Android app for delivery riders.
+
+### Features
+
+- ✅ **Simple Login**: Phone + 5-digit passcode (no OTP)
+- ✅ **Order Management**: Accept, pickup, deliver orders
+- ✅ **Live Tracking**: Real-time tracking with Google Maps
+- ✅ **Earnings**: View earnings, request payouts via Hubtel
+- ✅ **Profile**: Update online status, view ratings
+- ✅ **English Only**: Simple, focused interface
+
+### Quick Setup
+
+```bash
+cd rider-app
+./gradlew assembleDebug
+./gradlew installDebug
+```
+
+### Configuration
+
+Update API endpoints in `rider-app/build.gradle`:
+
+```gradle
+buildConfigField("String", "API_BASE_URL", "\"https://api.anomaah.gh/\"")
+```
+
+### Complete Guide
+
+📖 See [ANDROID_APP_GUIDE.md](ANDROID_APP_GUIDE.md) for:
+- Complete setup instructions
+- Architecture details
+- API integration
+- Building & deployment
+- Troubleshooting
+
+---
 
 ## 🇬🇭 Ghana-Specific Configuration
 
