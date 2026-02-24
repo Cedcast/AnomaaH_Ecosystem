@@ -123,12 +123,14 @@ def validate_ghana_phone(phone: str) -> Dict[str, Any]:
     if phone.startswith('0'):
         phone = '+233' + phone[1:]
     
-    # Extract network prefix (first 3 digits after +233)
-    # For +233244123456, we want '024' (0 + first 2 digits)
+    # Extract network prefix (first 3 digits of local number)
+    # For +233244123456, we want '024' (local format would be 0244123456)
+    # So we take first 2 digits after +233 and prepend '0'
     if len(phone) >= 7:
-        # Extract digits 4-6 from +233 (index 4,5,6)
-        prefix_digits = phone[4:6]  # Get 2 digits
-        prefix = '0' + prefix_digits  # Add leading 0
+        # Get first 2 digits after country code (indices 4-6 gives us 2 chars)
+        # +233244123456 -> indices 4,5 = '24' -> prefix = '024'
+        prefix_digits = phone[4:6]  # Get first 2 digits: '24'
+        prefix = '0' + prefix_digits  # Add leading 0: '024'
     else:
         prefix = None
     
@@ -447,56 +449,33 @@ def detect_mobile_money_provider(phone: str) -> Optional[Dict[str, str]]:
     return None
 
 
-# Language support (basic)
-SUPPORTED_LANGUAGES = {
-    'en': 'English',
-    'tw': 'Twi (Akan)',
-    'ga': 'Ga',
-}
-
+# SMS Templates (English only - as per requirements)
 SMS_TEMPLATES = {
-    'order_confirmed': {
-        'en': 'Your order #{order_id} has been confirmed. Delivery in {eta} mins. Track: {tracking_url}',
-        'tw': 'Wo order #{order_id} no asɛe. Wɔbɛbrɛ wo nneɛma wɔ simma {eta} mu. Track: {tracking_url}',
-        'ga': 'Wo order #{order_id} aba. Delivery le minute {eta} shikɛ. Track: {tracking_url}',
-    },
-    'rider_assigned': {
-        'en': 'Rider {rider_name} ({rider_phone}) has been assigned to your delivery.',
-        'tw': 'Rider {rider_name} ({rider_phone}) bɛfa wo nneɛma no akɔbrɛ wo.',
-        'ga': 'Rider {rider_name} ({rider_phone}) ni ba wo delivery no.',
-    },
-    'out_for_delivery': {
-        'en': 'Your order is out for delivery. Arriving soon!',
-        'tw': 'Wo nneɛma no rekɔ wo nkyɛn. Ɛrebɛduru ntɛm!',
-        'ga': 'Wo order le kome. E ba ka nikɛ!',
-    },
-    'delivered': {
-        'en': 'Your order has been delivered. Thank you!',
-        'tw': 'Wo nneɛma no aduru. Yɛda wo ase!',
-        'ga': 'Wo order aba. Oyiwaladonɔ!',
-    },
+    'otp_verification': 'Your AnomaaH verification code is: {otp}. Valid for 5 minutes.',
+    'order_confirmed': 'Your order #{order_id} has been confirmed. Delivery in {eta} mins. Track: {tracking_url}',
+    'rider_assigned': 'Rider {rider_name} ({rider_phone}) has been assigned to your delivery.',
+    'out_for_delivery': 'Your order is out for delivery. Arriving soon!',
+    'delivered': 'Your order has been delivered. Thank you for using AnomaaH!',
 }
 
 
-def get_sms_template(event: str, language: str = 'en', **kwargs) -> str:
+def get_sms_template(event: str, **kwargs) -> str:
     """
-    Get localized SMS template.
+    Get SMS template (English only).
     
     Args:
-        event: Event name (e.g., 'order_confirmed')
-        language: Language code ('en', 'tw', 'ga')
+        event: Event name (e.g., 'order_confirmed', 'otp_verification')
         **kwargs: Template variables
         
     Returns:
         Formatted SMS message
         
     Example:
-        >>> get_sms_template('order_confirmed', 'en', 
+        >>> get_sms_template('order_confirmed', 
         ...                  order_id='12345', eta=30, tracking_url='https://...')
         'Your order #12345 has been confirmed. Delivery in 30 mins. Track: https://...'
     """
-    templates = SMS_TEMPLATES.get(event, {})
-    template = templates.get(language, templates.get('en', ''))
+    template = SMS_TEMPLATES.get(event, '')
     
     if not template:
         return ''
@@ -504,8 +483,7 @@ def get_sms_template(event: str, language: str = 'en', **kwargs) -> str:
     try:
         return template.format(**kwargs)
     except KeyError:
-        # If missing variables, return English template
-        return templates.get('en', '').format(**kwargs)
+        return ''
 
 
 # Validation summary function

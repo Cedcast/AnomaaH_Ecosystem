@@ -9,20 +9,22 @@ AnomaaH is a comprehensive multi-tenant delivery infrastructure SaaS platform de
 ### Key Features
 
 ✅ **Core Platform**
-- Public 1-page booking (no accounts required)
+- **Simple 1-page booking** (no account creation required)
+- **Phone number only** - customers book with just their phone number
+- **OTP verification** - secure verification before booking confirmation
 - Automatic rider assignment with intelligent 5-factor scoring
 - Real-time order tracking with WebSocket support
 - Multi-tenant architecture with strict isolation
 - Mobile-responsive admin dashboard
 
 ✅ **Payment Integration**
-- Hubtel payment gateway (mobile money support)
+- **Hubtel payment gateway only** (mobile money support)
 - Support for MTN MoMo, Vodafone Cash, AirtelTigo Money
 - Webhook verification with HMAC-SHA256
 
 ✅ **Ghana-Specific Features**
 - Ghana phone number validation (+233 format)
-- Multi-language SMS notifications (English, Twi, Ga)
+- **English-only SMS notifications**
 - Mobile money provider auto-detection
 - Surge pricing for peak traffic hours (7-9 AM, 4-7 PM)
 - Support for Ghana's major cities and regions

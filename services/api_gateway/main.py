@@ -1,5 +1,6 @@
 import os
 import logging
+from datetime import datetime
 from fastapi import FastAPI, Request, Depends, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -138,6 +139,8 @@ async def root():
     return response
 
 
+from datetime import datetime
+
 @app.get("/health")
 async def health():
     """Health check endpoint for monitoring."""
@@ -145,7 +148,7 @@ async def health():
         "status": "healthy",
         "environment": ENVIRONMENT,
         "service": "api-gateway",
-        "timestamp": "2026-02-24T04:56:00Z"
+        "timestamp": datetime.utcnow().isoformat() + 'Z'
     }
 
 
