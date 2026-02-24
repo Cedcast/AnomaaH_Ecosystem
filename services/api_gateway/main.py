@@ -52,6 +52,7 @@ app.add_middleware(
 BOOKING_URL = os.environ.get("BOOKING_SERVICE_URL", "http://localhost:8100")
 AUTH_URL = os.environ.get("AUTH_SERVICE_URL", "http://localhost:8600")
 ORDER_URL = os.environ.get("ORDER_SERVICE_URL", "http://localhost:8500")
+RIDER_STATUS_URL = os.environ.get("RIDER_STATUS_SERVICE_URL", "http://localhost:8800")
 
 # Security headers middleware
 @app.middleware("http")
@@ -188,6 +189,88 @@ async def book(request: Request):
         return JSONResponse(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             content={"detail": "An error occurred while processing your booking."}
+        )
+
+
+# ============= Rider Status Routes =============
+
+@app.post("/status/update")
+async def update_rider_status(request: Request):
+    """
+    Update rider online/offline status.
+    Proxies to rider status service.
+    """
+    try:
+        body = await request.json()
+        
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            r = await client.post(
+                f"{RIDER_STATUS_URL}/status/update",
+                json=body,
+                headers={"Content-Type": "application/json"}
+            )
+            r.raise_for_status()
+            return JSONResponse(content=r.json(), status_code=r.status_code)
+    except httpx.HTTPStatusError as e:
+        logger.error(f"Status update error: {e}")
+        return JSONResponse(
+            status_code=e.response.status_code,
+            content={"detail": str(e)}
+        )
+    except Exception as e:
+        logger.error(f"Status update failed: {e}")
+        return JSONResponse(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            content={"detail": "Status service unavailable"}
+        )
+
+
+@app.get("/status/{rider_id}")
+async def get_rider_status(rider_id: str):
+    """
+    Get status of a single rider.
+    """
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            r = await client.get(f"{RIDER_STATUS_URL}/status/{rider_id}")
+            r.raise_for_status()
+            return JSONResponse(content=r.json(), status_code=r.status_code)
+    except httpx.HTTPStatusError as e:
+        logger.error(f"Get status error: {e}")
+        return JSONResponse(
+            status_code=e.response.status_code,
+            content={"detail": str(e)}
+        )
+    except Exception as e:
+        logger.error(f"Get status failed: {e}")
+        return JSONResponse(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            content={"detail": "Status service unavailable"}
+        )
+
+
+@app.get("/status/company/{company_id}")
+async def get_company_rider_statuses(company_id: str):
+    """
+    Get all rider statuses for a company.
+    Used by company dashboard to display rider fleet status.
+    """
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            r = await client.get(f"{RIDER_STATUS_URL}/status/company/{company_id}")
+            r.raise_for_status()
+            return JSONResponse(content=r.json(), status_code=r.status_code)
+    except httpx.HTTPStatusError as e:
+        logger.error(f"Get company statuses error: {e}")
+        return JSONResponse(
+            status_code=e.response.status_code,
+            content={"detail": str(e)}
+        )
+    except Exception as e:
+        logger.error(f"Get company statuses failed: {e}")
+        return JSONResponse(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            content={"detail": "Status service unavailable"}
         )
 
 

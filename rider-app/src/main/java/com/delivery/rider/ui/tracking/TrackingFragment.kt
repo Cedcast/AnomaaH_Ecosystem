@@ -4,22 +4,29 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.webkit.WebView
-import android.webkit.WebViewClient
+import android.widget.FrameLayout
+import android.widget.Toast
 import androidx.fragment.app.Fragment
 import com.delivery.rider.R
-import com.delivery.rider.BuildConfig
 import com.delivery.rider.ui.viewmodel.TrackingViewModel
 import androidx.fragment.app.viewModels
-import com.mapbox.maps.MapView
-import com.mapbox.maps.MapboxMap
-import com.mapbox.maps.Style
+import com.delivery.rider.ui.map.MapManager
+import com.delivery.rider.ui.map.MapProvider
+import dagger.hilt.android.AndroidEntryPoint
 
-// trackers and viewmodel
+/**
+ * TrackingFragment displays live tracking on a map.
+ * Uses MapManager to automatically select best available map provider:
+ * 1. Google Maps (primary)
+ * 2. Mapbox (fallback)
+ * 3. OSM WebView (emergency)
+ */
+@AndroidEntryPoint
 class TrackingFragment : Fragment() {
+    
     private val viewModel: TrackingViewModel by viewModels()
-    private var mapView: MapView? = null
-    private var mapboxMap: MapboxMap? = null
+    private var mapManager: MapManager? = null
+    private var mapProvider: MapProvider? = null
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
@@ -32,48 +39,54 @@ class TrackingFragment : Fragment() {
     }
 
     private fun setupMapView() {
-        val container = view?.findViewById<android.widget.FrameLayout>(R.id.mapContainer) ?: return
-        container.removeAllViews()
-        if (BuildConfig.USE_OSM_FALLBACK) {
-            val web = WebView(requireContext())
-            web.settings.javaScriptEnabled = true
-            web.webViewClient = WebViewClient()
-            web.loadDataWithBaseURL(null, osmHtml(), "text/html", "utf-8", null)
-            container.addView(web)
-        } else {
-            mapView = MapView(requireContext())
-            mapboxMap = mapView?.getMapboxMap()
-            mapboxMap?.setStyle(Style.MAPBOX_STREETS) {
-                // style loaded
+        val container = view?.findViewById<FrameLayout>(R.id.mapContainer) ?: return
+        
+        try {
+            // Initialize map with automatic provider selection
+            mapManager = MapManager(requireContext(), container)
+            mapProvider = mapManager?.initialize()
+            
+            // Show success message with provider name
+            mapProvider?.let {
+                Toast.makeText(
+                    requireContext(),
+                    "Using ${it.getName()}",
+                    Toast.LENGTH_SHORT
+                ).show()
             }
-            container.addView(mapView!!)
+            
+            // Show default location (Accra, Ghana)
+            mapProvider?.showLocation(5.6037, -0.1870, 13f, "Accra")
+            
+        } catch (e: Exception) {
+            Toast.makeText(
+                requireContext(),
+                "Map initialization failed: ${e.message}",
+                Toast.LENGTH_LONG
+            ).show()
         }
     }
 
-    private fun osmHtml(): String {
-        return """
-            <!DOCTYPE html>
-            <html>
-            <head>
-              <meta name=\"viewport\" content=\"initial-scale=1.0, user-scalable=no\" />
-              <style>html, body { height:100%; margin:0; padding:0; }</style>
-              <link rel=\"stylesheet\" href=\"https://unpkg.com/leaflet@1.9.4/dist/leaflet.css\"/>
-              <script src=\"https://unpkg.com/leaflet@1.9.4/dist/leaflet.js\"></script>
-            </head>
-            <body>
-              <div id=\"map\" style=\"width:100%;height:100%\"></div>
-              <script>
-                var map = L.map('map').setView([5.6037, -0.1870], 13);
-                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                  maxZoom: 19
-                }).addTo(map);
-              </script>
-            </body>
-            </html>
-        """.trimIndent()
-    }
-
     private fun observeViewModel() {
-        // view model observers can be added here if needed
+        // Observe tracking data from ViewModel
+        viewModel.currentLocation.observe(viewLifecycleOwner) { location ->
+            location?.let {
+                mapProvider?.updateCurrentLocation(it.latitude, it.longitude)
+            }
+        }
+        
+        viewModel.activeRoute.observe(viewLifecycleOwner) { route ->
+            route?.let {
+                // Show route on map
+                mapProvider?.showRoute(it.pickup, it.dropoff, it.currentLocation)
+            }
+        }
+    }
+    
+    override fun onDestroyView() {
+        super.onDestroyView()
+        mapManager?.destroy()
+        mapManager = null
+        mapProvider = null
     }
 }
