@@ -6,7 +6,7 @@ specific to Ghana's market requirements.
 """
 
 import re
-from typing import Optional, Dict, List
+from typing import Optional, Dict, List, Any
 from datetime import datetime, time
 import pytz
 
@@ -72,7 +72,7 @@ TRAFFIC_PEAK_HOURS = [
 ]
 
 
-def validate_ghana_phone(phone: str) -> Dict[str, any]:
+def validate_ghana_phone(phone: str) -> Dict[str, Any]:
     """
     Validate and extract information from Ghana phone number.
     
@@ -123,13 +123,19 @@ def validate_ghana_phone(phone: str) -> Dict[str, any]:
     if phone.startswith('0'):
         phone = '+233' + phone[1:]
     
-    # Extract network prefix (digits 4-6 after +233)
-    prefix = phone[4:7]
+    # Extract network prefix (first 3 digits after +233)
+    # For +233244123456, we want '024' (0 + first 2 digits)
+    if len(phone) >= 7:
+        # Extract digits 4-6 from +233 (index 4,5,6)
+        prefix_digits = phone[4:6]  # Get 2 digits
+        prefix = '0' + prefix_digits  # Add leading 0
+    else:
+        prefix = None
     
     result['valid'] = True
     result['formatted'] = phone
     result['prefix'] = prefix
-    result['network'] = GHANA_PHONE_NETWORKS.get(prefix, 'Unknown')
+    result['network'] = GHANA_PHONE_NETWORKS.get(prefix, 'Unknown') if prefix else 'Unknown'
     
     return result
 
@@ -252,7 +258,7 @@ def calculate_surge_multiplier(dt: Optional[datetime] = None) -> float:
     return 1.0
 
 
-def validate_ghana_address(address: Dict[str, str]) -> Dict[str, any]:
+def validate_ghana_address(address: Dict[str, str]) -> Dict[str, Any]:
     """
     Validate Ghana address components.
     
@@ -328,7 +334,7 @@ def format_ghana_currency(amount: float, show_symbol: bool = True) -> str:
     return formatted
 
 
-def calculate_delivery_fee(distance_km: float, dt: Optional[datetime] = None) -> Dict[str, any]:
+def calculate_delivery_fee(distance_km: float, dt: Optional[datetime] = None) -> Dict[str, Any]:
     """
     Calculate delivery fee with Ghana-specific pricing and surge.
     
@@ -503,7 +509,7 @@ def get_sms_template(event: str, language: str = 'en', **kwargs) -> str:
 
 
 # Validation summary function
-def validate_booking_data(data: Dict) -> Dict[str, any]:
+def validate_booking_data(data: Dict) -> Dict[str, Any]:
     """
     Comprehensive validation for booking data with Ghana-specific checks.
     
