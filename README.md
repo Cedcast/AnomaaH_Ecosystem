@@ -145,6 +145,8 @@ cd rider-app
 ./gradlew installDebug
 ```
 
+**For Low-Spec PCs**: See [BUILDING_ON_LOW_SPEC_PC.md](../BUILDING_ON_LOW_SPEC_PC.md) for optimized build instructions.
+
 ### Configuration
 
 Update API endpoints in `rider-app/build.gradle`:
