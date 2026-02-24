@@ -886,6 +886,9 @@ async def get_rider_earnings(
     
     # Calculate date range based on period
     now = datetime.utcnow()
+    # For "all" period, use platform launch date (can be configured if needed)
+    PLATFORM_START_DATE = datetime(2020, 1, 1)
+    
     if period == "daily":
         start_date = now.replace(hour=0, minute=0, second=0, microsecond=0)
     elif period == "weekly":
@@ -893,7 +896,7 @@ async def get_rider_earnings(
     elif period == "monthly":
         start_date = now - timedelta(days=30)
     else:  # all
-        start_date = datetime(2020, 1, 1)
+        start_date = PLATFORM_START_DATE
     
     # Query delivered orders for this rider
     delivered_orders = db.query(Order).filter(
@@ -927,7 +930,7 @@ async def get_rider_earnings(
             "amount": data["amount"],
             "orders": data["orders"],
             "distance": data["distance"],
-            "delivery_time": 0  # Not tracked yet
+            "delivery_time": 0  # TODO: Add delivery time tracking in future release
         }
         for date_str, data in sorted(daily_earnings_map.items())
     ]
