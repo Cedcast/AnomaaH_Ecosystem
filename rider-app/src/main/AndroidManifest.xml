@@ -27,7 +27,7 @@
         <!-- Google Maps API Key -->
         <meta-data
             android:name="com.google.android.geo.API_KEY"
-            android:value="AIzaSyBplM3-vJV-H92Ej1lH6V8E8Yw1eVSrVhI" />
+            android:value="@string/google_maps_key" />
         
         <!-- Splash screen (launcher) -->
         <activity
@@ -61,6 +61,11 @@
         <service
             android:name=".service.LocationService"
             android:foregroundServiceType="location"
+            android:exported="false" />
+        
+        <!-- Status Heartbeat Service -->
+        <service
+            android:name=".service.RiderStatusService"
             android:exported="false" />
         
     </application>
