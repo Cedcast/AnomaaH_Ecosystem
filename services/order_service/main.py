@@ -468,6 +468,13 @@ async def update_order_status(
             order.picked_up_at = datetime.utcnow()
         elif new_status == OrderStatus.DELIVERED:
             order.delivered_at = datetime.utcnow()
+            
+            # Update rider's total earnings when order is delivered
+            if order.assigned_rider_id:
+                rider_rec = db.query(Rider).filter(Rider.id == order.assigned_rider_id).first()
+                if rider_rec:
+                    rider_rec.total_earnings = (rider_rec.total_earnings or 0.0) + order.price_ghs
+                    logger.info(f"Updated rider {rider_rec.id} earnings: +{order.price_ghs} GHS, total: {rider_rec.total_earnings} GHS")
         elif new_status == OrderStatus.CANCELLED:
             order.cancelled_at = datetime.utcnow()
         
@@ -852,6 +859,119 @@ async def retry_refund(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to retry refund"
         )
+
+
+# ==================== Earnings Endpoint ====================
+
+@app.get("/earnings/{rider_id}")
+async def get_rider_earnings(
+    rider_id: str,
+    period: str = "monthly",  # daily, weekly, monthly, all
+    db: Session = Depends(get_db)
+):
+    """
+    Calculate rider earnings from delivered orders.
+    Returns daily breakdown and totals for the requested period.
+    """
+    from datetime import datetime, timedelta
+    from sqlalchemy import func
+    
+    # Verify rider exists
+    rider = db.query(Rider).filter(Rider.id == rider_id).first()
+    if not rider:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Rider not found"
+        )
+    
+    # Calculate date range based on period
+    now = datetime.utcnow()
+    # For "all" period, use platform launch date (can be configured if needed)
+    PLATFORM_START_DATE = datetime(2020, 1, 1)
+    
+    if period == "daily":
+        start_date = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    elif period == "weekly":
+        start_date = now - timedelta(days=7)
+    elif period == "monthly":
+        start_date = now - timedelta(days=30)
+    else:  # all
+        start_date = PLATFORM_START_DATE
+    
+    # Query delivered orders for this rider
+    delivered_orders = db.query(Order).filter(
+        and_(
+            Order.assigned_rider_id == rider_id,
+            Order.status == OrderStatus.DELIVERED,
+            Order.delivered_at >= start_date
+        )
+    ).all()
+    
+    # Calculate daily earnings
+    from collections import defaultdict
+    daily_earnings_map = defaultdict(lambda: {
+        "amount": 0.0,
+        "orders": 0,
+        "distance": 0.0
+    })
+    
+    total_earnings = 0.0
+    for order in delivered_orders:
+        date_str = order.delivered_at.strftime("%Y-%m-%d")
+        daily_earnings_map[date_str]["amount"] += order.price_ghs
+        daily_earnings_map[date_str]["orders"] += 1
+        daily_earnings_map[date_str]["distance"] += order.distance_km
+        total_earnings += order.price_ghs
+    
+    # Convert to list format expected by app
+    daily_list = [
+        {
+            "date": date_str,
+            "amount": data["amount"],
+            "orders": data["orders"],
+            "distance": data["distance"],
+            "delivery_time": 0  # TODO: Add delivery time tracking in future release
+        }
+        for date_str, data in sorted(daily_earnings_map.items())
+    ]
+    
+    # Calculate period totals
+    weekly_start = now - timedelta(days=7)
+    monthly_start = now - timedelta(days=30)
+    
+    weekly_total = sum(
+        order.price_ghs 
+        for order in delivered_orders 
+        if order.delivered_at >= weekly_start
+    )
+    
+    monthly_total = sum(
+        order.price_ghs 
+        for order in delivered_orders 
+        if order.delivered_at >= monthly_start
+    )
+    
+    # Update rider's total_earnings in database (sync with actual delivered orders)
+    all_time_earnings = db.query(func.sum(Order.price_ghs)).filter(
+        and_(
+            Order.assigned_rider_id == rider_id,
+            Order.status == OrderStatus.DELIVERED
+        )
+    ).scalar() or 0.0
+    
+    # Update rider model with calculated earnings
+    rider.total_earnings = float(all_time_earnings)
+    db.commit()
+    
+    return {
+        "success": True,
+        "data": {
+            "daily": daily_list,
+            "weekly_total": float(weekly_total),
+            "monthly_total": float(monthly_total),
+            "total_earnings": float(all_time_earnings)
+        }
+    }
 
 if __name__ == "__main__":
     import uvicorn

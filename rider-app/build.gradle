@@ -65,6 +65,8 @@ android {
         debug {
             minifyEnabled false
             debuggable true
+            // Optimize for faster builds on low-spec PCs
+            crunchPngs false // Disable PNG crunching for faster debug builds
         }
     }
 
@@ -85,8 +87,15 @@ android {
         buildConfig true
     }
     
-    // kapt block removed for Java 17 compatibility
-    // Ensure kapt and hilt versions match Kotlin plugin
+    // Optimize Kapt for low-spec PCs
+    kapt {
+        correctErrorTypes true
+        useBuildCache true
+        // Use parallel processing with limited workers
+        javacOptions {
+            option("-Xmaxerrs", 500)
+        }
+    }
 }
 
 dependencies {

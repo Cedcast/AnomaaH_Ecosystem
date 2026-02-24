@@ -44,6 +44,9 @@ A **simple, focused Android app** for delivery riders in Ghana to:
 - Android SDK 34
 - Java 17+
 - Kotlin 1.9+
+- **Minimum RAM**: 4GB (8GB recommended)
+
+> **Note for Low-Spec PCs**: If your PC has limited resources (4GB RAM or less), see [BUILDING_ON_LOW_SPEC_PC.md](BUILDING_ON_LOW_SPEC_PC.md) for optimized build instructions that prevent freezing.
 
 ### 1. Clone & Open
 ```bash

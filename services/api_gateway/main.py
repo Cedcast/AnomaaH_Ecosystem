@@ -274,6 +274,34 @@ async def get_company_rider_statuses(company_id: str):
         )
 
 
+@app.get("/earnings/{rider_id}")
+async def get_rider_earnings(rider_id: str, period: str = "monthly"):
+    """
+    Get rider earnings from order service.
+    Proxies request to order service which calculates earnings from delivered orders.
+    """
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            r = await client.get(
+                f"{ORDER_URL}/earnings/{rider_id}",
+                params={"period": period}
+            )
+            r.raise_for_status()
+            return JSONResponse(content=r.json(), status_code=r.status_code)
+    except httpx.HTTPStatusError as e:
+        logger.error(f"Get earnings error: {e}")
+        return JSONResponse(
+            status_code=e.response.status_code,
+            content={"detail": str(e)}
+        )
+    except Exception as e:
+        logger.error(f"Get earnings failed: {e}")
+        return JSONResponse(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            content={"detail": "Order service unavailable"}
+        )
+
+
 # Startup validation
 @app.on_event("startup")
 async def startup_event():
